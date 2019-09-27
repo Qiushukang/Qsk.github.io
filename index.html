@@ -268,7 +268,7 @@
             <div @click="closeAdvertisment">关闭</div>
         </div>
         <div class="banner-item">
-            <div v-for="(item,index) of act">
+            <div v-for="(item,index) of act" @click="toUrl(item.url)">
                 <div>
                     <img :src="item.img" :alt="item.title" :title="item.title">
                 </div>
@@ -474,9 +474,9 @@
             closeAdvertisment() {
                 this.hide = !this.hide
             },
-            toUrl(e) {
-                console.log(e)
-                window.open(e.target.dataset.url)
+            toUrl(a) {console.log(1)
+                console.log(a)
+                window.open(a)
             }
         },
         created() {
