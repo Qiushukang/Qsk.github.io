@@ -2,11 +2,14 @@
 <html lang="en">
 
 <head>
+    <link rel="shortcut icon" href="https://static.easyicon.net/preview/117/1173365.gif" type="image/x-icon" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>我的导航(qsk)</title>
     <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script>
         console.log(navigator.userAgent);
         var os = function () {
@@ -28,7 +31,10 @@
         }();
 
         if (os.isAndroid || os.isPhone || os.isTablet) {
-            alert("用电脑打开好吧,移动版待开发中")
+            alert("用电脑打开好吧,即将关闭页面")
+            setTimeout(() => {
+                windows.close()
+            }, 3000)
         } else if (os.isPc) {
             console.log("电脑")
         }
@@ -49,7 +55,7 @@
             box-shadow: -2px 1px 11px 0px #ccc;
             padding: 0 20px 0 20px;
             margin-bottom: 20px;
-            width: 1000px;
+            width: 1100px;
             height: 100px;
             overflow: hidden;
             margin: auto;
@@ -69,11 +75,12 @@
         nav>.navItem {
             padding: 10px 0 10px 0;
             text-align: center;
-            width: 86px;
+            width: 97px;
             line-height: 80px;
             font-size: 25px;
             float: left;
-            border-top: 4px solid #fff
+            border-top: 4px solid #fff;
+            transition: 1s;
         }
 
         .navItem:hover {
@@ -188,7 +195,7 @@
         .bigImg {
             text-align: center;
             width: 900px;
-            margin:  auto;
+            margin: auto;
             margin-top: 40px;
         }
 
@@ -231,8 +238,8 @@
         }
 
         .banner-item img {
-            width: 120px;
-            height: 120px;
+            width: 115px;
+            height: 115px;
             /* box-shadow: 2px 2px 2px 0px #222 */
         }
 
@@ -241,12 +248,12 @@
             position: fixed;
             right: 20px;
             top: 200px;
-            text-align: right
+            text-align: center
         }
 
         .open-qq img {
             width: 50px;
-            height:50px;
+            height: 50px;
             animation: wobble 5s;
         }
 
@@ -291,6 +298,50 @@
             -webkit-animation-name: wobble;
             animation-name: wobble;
         }
+
+        .qq-hide {
+            width: 80%;
+            margin: auto;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #4C51BA;
+            transition: 2s;
+            cursor: pointer;
+        }
+
+        .qq-hide.hide {
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .weather {
+            width: 1100px;
+            margin: auto;
+            display: flex;
+            margin-top: 30px;
+        }
+
+        .weather img {
+            width: 87px;
+            height: 80px;
+            margin: 0 20px 0 200px
+        }
+
+        .weather>div {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .weather>div:nth-child(3) {
+            padding-left: 20px;
+        }
+
+        .weather>div:nth-child(4) {
+            padding-left: 30px;
+            /* font-weight: bold; */
+            width: 250px;
+        }
     </style>
 </head>
 
@@ -305,6 +356,24 @@
                 {{item}}
             </div>
         </nav>
+        <div class="weather">
+            <div>
+                <img :src="weatherimg">
+            </div>
+            <div>
+                <p>{{TDate}}</p>
+                <p>{{city}}</p>
+                <p>{{tempature}}</p>
+            </div>
+            <div>
+                <p>风速:{{air}}</p>
+                <p>风向:{{air_direction}}</p>
+                <p>空气质量:{{air_level}}</p>
+            </div>
+            <div>
+                <p :style="randomColor" style="transition: 3s">{{notice}}</p>
+            </div>
+        </div>
         <div class="bigImg">
             <img :src="selectedUrlImg" alt="">
         </div>
@@ -320,7 +389,7 @@
         </div>
         <div class="input">
             <span :style="searchColor" @click="search">{{seo}}</span>
-            <input type="text" :placeholder="placeholder_text" v-model="searchText" @keyup.enter="search">
+            <input type="text" :placeholder="placeholder_text" v-model="searchText" @keyup.enter="search" v-focus>
         </div>
         <div class="time" v-if="!hide">
             <img :src="timeUrl" alt="" title="时间">
@@ -331,6 +400,9 @@
         </div>
         <div class="open-qq" @click="openQQ">
             <img :src="qqImage" alt="">
+            <div class="qq-hide" :class="qqHide==true?'hide':''" @click="fankui">
+                如有问题请点我反馈
+            </div>
         </div>
         <div class="banner-item">
             <div v-for="(item,index) of act" @click="toUrl(item.url)">
@@ -343,24 +415,27 @@
     </div>
 </body>
 <script>
+    Vue.directive('focus', {
+        inserted: function (el) {
+            el.focus();
+        }
+    })
     var vm = new Vue({
         el: "#app",
         data: {
             logo: "https://s2.ax1x.com/2019/09/28/uM796s.png", //导航处logo
-            type: [
-                "影视", '工具', "下载", "游戏", "教程", "框架", "系统", "图片", "配置"
-            ],//类型
+            type: [],//类型
             typeSelectId: 0,
             searchType: [
-                { img: 'https://static.easyicon.net/preview/114/1141427.gif', ss: "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=", title: "百度搜索", color: "background-color:#4C51BA", bigImg: "https://t1.picb.cc/uploads/2019/09/26/gxn3t7.png" },
-                { img: "https://static.easyicon.net/preview/118/1186823.gif", ss: "https://www.sogou.com/web?query=", title: "搜狗搜索", color: "background-color:#E87719", bigImg: "http://wenwen.soso.com/p/20091219/20091219181857-840908174.jpg" },
-                { img: "https://static.easyicon.net/preview/106/1065264.gif", ss: "https://www.so.com/s?ie=utf-8&fr=none&src=360sou_newhome&q=", title: "360搜索", color: "background-color:#335D0C", bigImg: "https://p3.ssl.qhimgs1.com/sdr/400__/t01d04d5ce2acc5ec4d.jpg" }, { img: "https://static.easyicon.net/preview/114/1141431.gif", ss: "https://cn.bing.com/search?q=", title: "bing搜索", color: "#BF7D10", bigImg: "http://y2.ifengimg.com/45746f19f68ef8b4/2013/1011/rdn_52574f1ecd712.png" }, { img: "https://s2.ax1x.com/2019/09/28/uMTSqx.png", ss: "https://yandex.com/search/?text=", title: "yandex", color: "background-color:#000", bigImg: "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1569609393177&di=970f73e75a329251b0ee8ddb4f0d344a&imgtype=0&src=http%3A%2F%2Fd.ifengimg.com%2Fw600%2Fp0.ifengimg.com%2Fpmop%2F2017%2F1221%2F8D18A7AD7F2C651511A5110DFD057FFC93AC456A_size28_w782_h338.jpeg" },
+                { img: 'https://static.easyicon.net/preview/114/1141427.gif', ss: "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=", title: "百度搜索", color: "background-color:#4C51BA", bigImg: "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1569836622198&di=3625b9430b90bd6a0d4341d5b295806f&imgtype=0&src=http%3A%2F%2Fimg.zcool.cn%2Fcommunity%2F0154655c3428e3a80121df90810cf0.jpg" },
+                { img: "https://static.easyicon.net/preview/118/1186823.gif", ss: "https://www.sogou.com/web?query=", title: "搜狗搜索", color: "background-color:#E87719", bigImg: "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1569667755652&di=55684b329ec1ec9004090341998fc31a&imgtype=0&src=http%3A%2F%2Ffile.rongdaitong.cn%2Fwebsite%2Fspider%2Fhexun%2Fpedaily%2F20140520%4040746.jpg" },
+                { img: "https://static.easyicon.net/preview/106/1065264.gif", ss: "https://www.so.com/s?ie=utf-8&fr=none&src=360sou_newhome&q=", title: "360搜索", color: "background-color:#335D0C", bigImg: "https://p3.ssl.qhimgs1.com/sdr/400__/t01d04d5ce2acc5ec4d.jpg" }, { img: "https://static.easyicon.net/preview/114/1141431.gif", ss: "https://cn.bing.com/search?q=", title: "bing搜索", color: "background-color:#BF7D10", bigImg: "http://img4.imgtn.bdimg.com/it/u=4077565005,4234090679&fm=26&gp=0.jpg" }, { img: "https://s2.ax1x.com/2019/09/28/uMTSqx.png", ss: "https://yandex.com/search/?text=", title: "yandex", color: "background-color:#000", bigImg: "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1569609393177&di=970f73e75a329251b0ee8ddb4f0d344a&imgtype=0&src=http%3A%2F%2Fd.ifengimg.com%2Fw600%2Fp0.ifengimg.com%2Fpmop%2F2017%2F1221%2F8D18A7AD7F2C651511A5110DFD057FFC93AC456A_size28_w782_h338.jpeg" },
                 { img: "https://s2.ax1x.com/2019/09/28/uMT9Z6.png", ss: "http://www.chinaso.com/search/pagesearch.htm?q=", title: "中国搜索", color: "background-color:#EA2738", bigImg: "https://s2.ax1x.com/2019/09/28/uM7rAf.png" },
                 { img: "https://static.easyicon.net/preview/120/1204761.gif", ss: "http://i.appeasou.com/s.m?q=", title: "es宜搜", color: "background-color:#0286CF", bigImg: "https://s2.ax1x.com/2019/09/28/uMo6Vf.jpg" }
             ],//搜索引擎
             placeholder_text: "让老子帮你搜搜",
             seo: "百度搜索",//选中的搜索引擎
-            selectedUrlImg: "https://t1.picb.cc/uploads/2019/09/26/gxn3t7.png",//选中搜索引擎大图
+            selectedUrlImg: "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1569836622198&di=3625b9430b90bd6a0d4341d5b295806f&imgtype=0&src=http%3A%2F%2Fimg.zcool.cn%2Fcommunity%2F0154655c3428e3a80121df90810cf0.jpg",//选中搜索引擎大图
             seoUrl: "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=",
             searchText: "",//搜索文本
             searchColor: "background-color:#4C51BA", //按钮背景颜色
@@ -368,9 +443,62 @@
             time: "",//时间
             hide: true, //时间模块
             qqImage: "https://s2.ax1x.com/2019/09/28/uMqm9S.png", //QQ图片
+            qqHide: true,
             act: [],//对象
-            jsonArr: [
+            jsonArr: [],
+            //天气arr
+            weatherarr: [
                 {
+                    img: "https://static.easyicon.net/preview/54/545078.gif",
+                    intro: "xue"
+                },
+                {
+                    img: "https://static.easyicon.net/preview/54/545079.gif",
+                    intro: "lei"
+                },
+                {
+                    img: "https://static.easyicon.net/preview/54/545095.gif",
+                    intro: "shachen"
+                },
+                {
+                    img: "https://static.easyicon.net/preview/54/545110.gif",
+                    intro: "wu"
+                },
+                {
+                    img: "https://static.easyicon.net/preview/54/545080.gif",
+                    intro: "bingbao"
+                },
+                {
+                    img: "https://static.easyicon.net/preview/54/545090.gif",
+                    intro: "yun"
+                },
+                {
+                    img: "https://static.easyicon.net/preview/54/545074.gif",
+                    intro: "yu"
+                },
+                {
+                    img: "https://static.easyicon.net/preview/54/545088.gif",
+                    intro: "yin"
+                },
+                {
+                    img: "https://static.easyicon.net/preview/54/545094.gif",
+                    intro: "qing"
+                }
+            ],
+            weatherimg: "",//气象图
+            city: "",//气象城市+实时温度
+            tempature: "",//气温范围
+            TDate: "",//气象日期
+            notice: "",//气象注意事项
+            randomColor: "",//随机颜色
+            air: "",//风速
+            air_level: "",//空气质量等级
+            air_direction: "",//风向
+            user: [{
+                user: "qsk-login",
+                userName: "书康",
+                type: ["影视", '工具', "下载", "游戏", "教程", "框架", "系统", "图片", "配置"],
+                jsonArr: [{
                     type: 0, intro: "影视", children: [
                         {
                             img: "https://static.easyicon.net/preview/112/1121405.gif",
@@ -414,29 +542,29 @@
                             url: "http://www.juqingba.cn/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/112/1121526.gif",
-                            title:"飘花电影",
-                            url:"https://www.piaohua.com"
+                            img: "https://static.easyicon.net/preview/112/1121526.gif",
+                            title: "飘花电影",
+                            url: "https://www.piaohua.com"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/112/1121507.gif",
-                            title:"中国高清网",
-                            url:"http://gaoqing.la"
+                            img: "https://static.easyicon.net/preview/112/1121507.gif",
+                            title: "中国高清网",
+                            url: "http://gaoqing.la"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/112/1121591.gif",
-                            title:"优质电影网",
-                            url:"http://www.youzhidy.com"
+                            img: "https://static.easyicon.net/preview/112/1121591.gif",
+                            title: "优质电影网",
+                            url: "http://www.youzhidy.com"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/112/1121586.gif",
-                            title:"字幕库",
-                            url:"http://www.zimuku.la"
+                            img: "https://static.easyicon.net/preview/112/1121586.gif",
+                            title: "字幕库",
+                            url: "http://www.zimuku.la"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/112/1121578.gif",
-                            title:"豆瓣电影",
-                            url:"https://movie.douban.com"
+                            img: "https://static.easyicon.net/preview/112/1121578.gif",
+                            title: "豆瓣电影",
+                            url: "https://movie.douban.com"
                         }
                     ]
                 },
@@ -526,117 +654,362 @@
                     ]
                 },
                 {
-                    type:3,intro:"下载",children:[
+                    type: 3, intro: "下载", children: [
                         {
-                            img:"https://static.easyicon.net/preview/118/1184154.gif",
-                            title:"songtasty",
-                            url:"http://songtasty.com/"
+                            img: "https://static.easyicon.net/preview/118/1184154.gif",
+                            title: "songtasty",
+                            url: "http://songtasty.com/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1184156.gif",
-                            title:"PC6下载站",
-                            url:"http://www.pc6.com/"
+                            img: "https://static.easyicon.net/preview/118/1184156.gif",
+                            title: "PC6下载站",
+                            url: "http://www.pc6.com/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1184169.gif",
-                            title:"腾牛下载站",
-                            url:"https://www.qqtn.com/"
+                            img: "https://static.easyicon.net/preview/118/1184169.gif",
+                            title: "腾牛下载站",
+                            url: "https://www.qqtn.com/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1184166.gif",
-                            title:"505下载站",
-                            url:"https://www.505z.com/"
+                            img: "https://static.easyicon.net/preview/118/1184166.gif",
+                            title: "505下载站",
+                            url: "https://www.505z.com/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1184207.gif",
-                            title:"系统盒下载站",
-                            url:"http://www.xitonghe.com/"
+                            img: "https://static.easyicon.net/preview/118/1184207.gif",
+                            title: "系统盒下载站",
+                            url: "http://www.xitonghe.com/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1184236.gif",
-                            title:"3K资源下载",
-                            url:"http://www.3kzy.com/#daohangtxPc"
+                            img: "https://static.easyicon.net/preview/118/1184236.gif",
+                            title: "3K资源下载",
+                            url: "http://www.3kzy.com/#daohangtxPc"
                         },
-                        {   
-                            img:"https://static.easyicon.net/preview/118/1184171.gif",
-                            title:"当热网管理资料下载",
-                            url:"http://www.downhot.com/"
+                        {
+                            img: "https://static.easyicon.net/preview/118/1184171.gif",
+                            title: "当热网管理资料下载",
+                            url: "http://www.downhot.com/"
                         }
                     ]
                 },
                 {
-                    type:4,intro:"游戏",children:[
+                    type: 4, intro: "游戏", children: [
                         {
-                            img:"https://static.easyicon.net/preview/118/1186792.gif",
-                            title:"逗游",
-                            url:"http://www.doyo.cn"
+                            img: "https://static.easyicon.net/preview/118/1186792.gif",
+                            title: "逗游",
+                            url: "http://www.doyo.cn"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1186798.gif",
-                            title:"游侠",
-                            url:"http://www.ali213.net/"
+                            img: "https://static.easyicon.net/preview/118/1186798.gif",
+                            title: "游侠",
+                            url: "http://www.ali213.net/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1186725.gif",
-                            title:"3dm",
-                            url:"https://www.3dmgame.com/"
+                            img: "https://static.easyicon.net/preview/118/1186725.gif",
+                            title: "3dm",
+                            url: "https://www.3dmgame.com/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1186890.gif",
-                            title:"GBT下载",
-                            url:"http://renxufeng.ys168.com/"
+                            img: "https://static.easyicon.net/preview/118/1186890.gif",
+                            title: "GBT下载",
+                            url: "http://renxufeng.ys168.com/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1186828.gif",
-                            title:"三国杀在线版",
-                            url:"http://web.sanguosha.com/login/index.html"
+                            img: "https://static.easyicon.net/preview/118/1186828.gif",
+                            title: "三国杀在线版",
+                            url: "http://web.sanguosha.com/login/index.html"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1186726.gif",
-                            title:"4399小游戏",
-                            url:"http://www.4399.com/"
-                        },
-                        {   
-                            img:"https://static.easyicon.net/preview/118/1186936.gif",
-                            title:"7k7k游戏",
-                            url:"http://www.7k7k.com/index.php"
+                            img: "https://static.easyicon.net/preview/118/1186726.gif",
+                            title: "4399小游戏",
+                            url: "http://www.4399.com/"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1186791.gif",
-                            title:"3366小游戏",
-                            url:"https://www.roblox.com"
+                            img: "https://static.easyicon.net/preview/118/1186936.gif",
+                            title: "7k7k游戏",
+                            url: "http://www.7k7k.com/index.php"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1186740.gif",
-                            title:"街机中国",
-                            url:"https://www.mamecn.com/"
+                            img: "https://static.easyicon.net/preview/118/1186791.gif",
+                            title: "3366小游戏",
+                            url: "https://www.roblox.com"
                         },
                         {
-                            img:"https://static.easyicon.net/preview/118/1186801.gif",
-                            title:"FC游戏",
-                            url:"https://www.fcnes.com/fc/"
+                            img: "https://static.easyicon.net/preview/118/1186740.gif",
+                            title: "街机中国",
+                            url: "https://www.mamecn.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/118/1186801.gif",
+                            title: "FC游戏",
+                            url: "https://www.fcnes.com/fc/"
+                        }
+                    ]
+                },
+                {
+                    type: 5, intro: "教程", children: [
+                        {
+                            img: "https://static.easyicon.net/preview/117/1174039.gif",
+                            title: "高清视频教程",
+                            url: "http://www.52studyit.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/117/1173704.gif",
+                            title: "网易云课堂",
+                            url: "https://study.163.com/?from=study"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/117/1174011.gif",
+                            title: "PHP中文网",
+                            url: "http://www.php.cn/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/117/1173787.gif",
+                            title: "腾讯课堂",
+                            url: "https://ke.qq.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/117/1173788.gif",
+                            title: "W3C",
+                            url: "http://www.w3school.com.cn/h.asp"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/117/1173922.gif",
+                            title: "我要自学网",
+                            url: "https://www.51zxw.net/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/117/1173930.gif",
+                            title: "慕课网",
+                            url: "https://www.imooc.com/"
+                        }
+                    ]
+                },
+                {
+                    type: 6, intro: "框架", children: [
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228885.gif",
+                            title: "MUI",
+                            url: "http://dev.dcloud.net.cn/mui/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228891.gif",
+                            title: "React",
+                            url: "https://react.docschina.org/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228886.gif",
+                            title: "zepto",
+                            url: "https://www.html.cn/doc/zeptojs_api/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228895.gif",
+                            title: "vux",
+                            url: "https://vux.li/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228899.gif",
+                            title: "elementUI",
+                            url: "https://element.faas.ele.me/#/zh-CN"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228902.gif",
+                            title: "vantUI",
+                            url: "https://youzan.github.io/vant/#/zh-CN/intro"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228917.gif",
+                            title: "layUI",
+                            url: "https://www.layui.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228915.gif",
+                            title: "LuLuUI",
+                            url: "https://l-ui.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228907.gif",
+                            title: "sui",
+                            url: "http://m.sui.taobao.org/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228906.gif",
+                            title: "Mint-ui",
+                            url: "http://mint-ui.github.io/#!/zh-cn"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228926.gif",
+                            title: "VUE",
+                            url: "http://doc.vue-js.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228950.gif",
+                            title: "angularJS",
+                            url: "http://www.angularjs.net.cn/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228946.gif",
+                            title: "Bootstrap",
+                            url: "http://www.bootcss.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/122/1228945.gif",
+                            title: "Animate",
+                            url: "https://daneden.github.io/animate.css/"
+                        }
+                    ]
+                },
+                {
+                    type: 7, intro: "系统", children: [
+                        {
+                            img: "https://static.easyicon.net/preview/118/1180237.gif",
+                            title: "纯净版系统",
+                            url: "https://msdn.itellyou.cn/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/117/1179956.gif",
+                            title: "系统之家",
+                            url: "http://www.xitongzhijia.net/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/118/1180205.gif",
+                            title: "U盘PE系统",
+                            url: "http://www.tudoupe.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/117/1179991.gif",
+                            title: "Win7系统",
+                            url: "https://www.win7qjb.com/win7cjb/"
+                        }
+                    ]
+                },
+                {
+                    type: 8, intro: "图片", children: [
+                        {
+                            img: "https://static.easyicon.net/preview/113/1130459.gif",
+                            title: "千图网",
+                            url: "http://www.58pic.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/113/1130455.gif",
+                            title: "千库网",
+                            url: "http://588ku.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/113/1130466.gif",
+                            title: "阿里巴巴矢量库",
+                            url: "https://www.iconfont.cn/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/113/1130467.gif",
+                            title: "easy icon",
+                            url: "https://www.easyicon.net/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/113/1130472.gif",
+                            title: "装逼图片",
+                            url: "http://zb.yuanrenbang.com/#daohangtxPc"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/113/1130465.gif",
+                            title: "真棒壁纸",
+                            url: "https://www.easyicon.net/"
+                        }
+                    ]
+                },
+                {
+                    type: 9, intro: "配置", children: [
+                        {
+                            img: "https://static.easyicon.net/preview/111/1116937.gif",
+                            title: "中关村",
+                            url: "http://www.zol.com.cn/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/111/1116947.gif",
+                            title: "众测基准",
+                            url: "http://www.zhcet.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/111/1116952.gif",
+                            title: "电脑配置清单",
+                            url: "http://www.lotpc.com/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/111/1116957.gif",
+                            title: "显卡天梯",
+                            url: "http://www.mydrivers.com/zhuanti/tianti/gpu/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/111/1116948.gif",
+                            title: "电脑CPU天梯",
+                            url: "http://www.mydrivers.com/zhuanti/tianti/cpu/"
+                        },
+                        {
+                            img: "https://static.easyicon.net/preview/111/1116936.gif",
+                            title: "手机CPU天梯",
+                            url: "http://www.mydrivers.com/zhuanti/tianti/01/"
                         }
                     ]
                 }
-            ]
+                ],
+            },
+            {}],//模拟用户登陆
         },
         methods: {
             //页面初始数据
             createdSet() {
                 let id = localStorage.getItem("typeId")
-                if (id) {
-                    try {
-                        this.act = this.jsonArr[id].children
-                        this.typeSelectId = id
-                    } catch (err) {
-                        this.act = this.jsonArr[0].children
-                        this.typeSelectId = 0
-                    }
 
+                let user = sessionStorage.getItem("loginName");
+                console.log(user)
+                if (user) {
+                    for (let i = 0; i < this.user.length; i++) {
+                        if (this.user[i].userName == user) {
+                            this.jsonArr = this.user[i].jsonArr;
+                            this.type = this.user[i].type;
+                            // sessionStorage.setItem("loginName")=this.user[i].userName;
+                            if (id) {
+                                try {
+                                    this.act = this.jsonArr[id].children
+                                    this.typeSelectId = id
+                                } catch (err) {
+                                    this.act = this.jsonArr[0].children
+                                    this.typeSelectId = 0
+                                }
+
+                            }
+                            else {
+                                this.act = this.jsonArr[0].children
+                            }
+                        }
+                    }
                 }
-                else {
-                    this.act = this.jsonArr[0].children
-                }
+            },
+            weather() {
+                axios({
+                    method: "get",
+                    url: "https://www.tianqiapi.com/api/?appid=17133619&appsecret=8mXPp87X&version=v6"
+                }).then((res) => {
+                    console.log(res);
+                    this.city = res.data.city + '  ' + res.data.tem + '°';
+                    this.tempature = "" + res.data.tem2 + '°-' + res.data.tem1 + '°';
+                    this.TDate = res.data.date + '  ' + res.data.week;
+                    this.notice = res.data.air_tips;
+                    this.air = res.data.air;
+                    this.air_level = res.data.air_level;
+                    this.air_direction = res.data.win
+                    setInterval(() => {
+                        let a = Math.random() * 255;
+                        let b = Math.random() * 255;
+                        let c = Math.random() * 255;
+                        this.randomColor = `color:rgb(${a},${b},${c})`
+                    }, 3000)
+                    for (let i = 0; i < this.weatherarr.length; i++) {
+                        if (this.weatherarr[i].intro == res.data.wea_img) {
+                            this.weatherimg = this.weatherarr[i].img
+                        }
+                    }
+                })
             },
             //选择搜索引擎
             pickSelect(e) {
@@ -663,6 +1036,37 @@
                 if (!this.searchText) {
                     return
                 }
+                if(sessionStorage.getItem("loginName")){
+                    window.open(this.seoUrl + this.searchText)
+                }else{
+                    if (this.searchText.indexOf("-login") != -1) {
+                    for (let i = 0; i < this.user.length; i++) {
+                        if (this.user[i].user == this.searchText) {
+                            alert("欢迎" + this.user[i].userName);
+                            this.jsonArr = this.user[i].jsonArr;
+                            this.type = this.user[i].type;
+                            sessionStorage.setItem("loginName", this.user[i].userName)
+                            let id = localStorage.getItem("typeId")
+                            if (id) {
+                                try {
+                                    this.act = this.jsonArr[id].children
+                                    this.typeSelectId = id
+                                } catch (err) {
+                                    this.act = this.jsonArr[0].children
+                                    this.typeSelectId = 0
+                                }
+
+                            }
+                            else {
+                                this.act = this.jsonArr[0].children
+                            }
+                        }
+                    }
+                    this.searchText=""
+                    return
+                }
+                }
+               
                 window.open(this.seoUrl + this.searchText)
             },
             //获取时间
@@ -687,15 +1091,25 @@
             toUrl(a) {
                 window.open(a)
             },
-            openQQ(){
-                var qq=762761765
-                window.open('http://wpa.qq.com/msgrd?v=3&uin='+qq+'&site=qq&menu=yes','_brank');
-            }
+            openQQ() {
+                this.qqHide = !this.qqHide
+            },
+            fankui(e) {
+                e.stopPropagation()
+                var qq = 1419690663
+                window.open('http://wpa.qq.com/msgrd?v=3&uin=' + qq + '&site=qq&menu=yes', '_brank');
+            },
         },
         created() {
+            this.weather()
             this.createdSet()
             this.timeModal()
-        }
+        },
+    })
+</script>
+<script>
+    $(function () {
+        $("input").val("11")
     })
 </script>
 
